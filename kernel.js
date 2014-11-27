@@ -461,7 +461,6 @@
     if (path.charAt(path.length - 1) == '/') {
       suffixes = ['index.js'];
     }
-
     var i = 0, ii = suffixes.length;
     var _find = function (i) {
       if (i < ii) {
@@ -499,6 +498,13 @@
     var module;
     var oldSyncLock = syncLock;
     syncLock = true;
+
+    // This is completely the wrong way to do it but for now it shows it works
+    if(path == "async"){
+      console.warn("path is async and we're doing a ghetto fix");
+      path = "async/lib/async";
+    }
+
     try {
       _moduleAtPath(path, fetchModuleSync, function (_module) {
         module = _module;
