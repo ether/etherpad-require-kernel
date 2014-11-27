@@ -452,7 +452,12 @@
   }
 
   function _moduleAtPath(path, fetchFunc, continuation) {
-    var suffixes = ['', '.js', '/index.js'];
+
+    // Making the below change saves on 2 http requests
+    // and also 1 per plugin and nothing seems to b0rk?
+    // This code is run on the client only
+    // var suffixes = ['', '.js', '/index.js'];
+    var suffixes = ['.js', '/index.js'];
     if (path.charAt(path.length - 1) == '/') {
       suffixes = ['index.js'];
     }
