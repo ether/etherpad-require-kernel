@@ -452,7 +452,8 @@
   }
 
   function _moduleAtPath(path, fetchFunc, continuation) {
-
+    // hack fix temporary in for etherpad #2505
+    if(path === "ep_etherpad-lite/static/js/pad.js") path = "ep_etherpad-lite/static/js/pad";
     // Making the below change saves on 2 http requests
     // and also 1 per plugin and nothing seems to b0rk?
     // This code is run on the client only
