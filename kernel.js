@@ -508,6 +508,13 @@
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
+    if(path == "underscore"){
+      // console.warn("path is async and we're doing a ghetto fix");
+      path = "underscore/underscore";
+    }
+
+    // HACK TODO
+    // This is completely the wrong way to do it but for now it shows it works
     if(path == "unorm"){
       // console.warn("path is async and we're doing a ghetto fix");
       path = "unorm/lib/unorm";
