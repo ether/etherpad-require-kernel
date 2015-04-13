@@ -458,9 +458,12 @@
     // and also 1 per plugin and nothing seems to b0rk?
     // This code is run on the client only
     // var suffixes = ['', '.js', '/index.js'];
-    var suffixes = ['.js', '/index.js'];
+    var suffixes = ['', '.js', '/index.js'];
     if (path.charAt(path.length - 1) == '/') {
-      suffixes = ['index.js'];
+      suffixes = ['index.js']; // definitely a directory
+    }
+    else if(path.indexOf('.') === -1) {
+      suffixes = ['.js', '/index.js'] // if it's definitely not a fully qualified file check .js and then index.js
     }
     var i = 0, ii = suffixes.length;
     var _find = function (i) {
