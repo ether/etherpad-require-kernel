@@ -266,7 +266,24 @@
     return xmlhttp;
   }
 
+  let randomVersionString;
+  const getRandomVersionString = () => {
+    if (randomVersionString) return randomVersionString;
+
+    let win = window;
+    while (win !== window.top) {
+      win = win.parent;
+      if (win.clientVars) {
+        randomVersionString = win.clientVars.randomVersionString;
+        return randomVersionString;
+      }
+    }
+  };
+
   function getXHR(uri, async, callback, request) {
+    if (getRandomVersionString()) {
+      uri = uri + `&v=${getRandomVersionString()}`;
+    }
     var request = request || createXMLHTTPObject();
     if (!request) {
       throw new Error("Error making remote request.")
