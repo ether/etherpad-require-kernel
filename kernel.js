@@ -268,9 +268,13 @@
 
   let randomVersionString;
   const getRandomVersionString = () => {
+    let win = window;
+
+    // check the current window first, relevant for parent/pad.html requires
+    if (win.clientVars && win.clientVars.randomVersionString)
+      randomVersionString = win.clientVars.randomVersionString;
     if (randomVersionString) return randomVersionString;
 
-    let win = window;
     while (win !== window.top) {
       win = win.parent;
       if (win.clientVars) {
