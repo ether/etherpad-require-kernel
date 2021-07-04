@@ -286,7 +286,10 @@
 
   function getXHR(uri, async, callback, request) {
     if (getRandomVersionString()) {
-      uri = uri + `&v=${getRandomVersionString()}`;
+      uri = `${uri}&v=${randomVersionString}`;
+    }
+    if (/tests\/frontend\/specs\//.test(uri)) {
+      uri = `${uri}&v=${Date.now()}`;
     }
     var request = request || createXMLHTTPObject();
     if (!request) {
