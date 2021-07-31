@@ -22,6 +22,7 @@ The kernel has the following methods:
 * `setRootURI`: The URI that non-library paths will be requested relative to. Default is `undefined`.
 * `setLibraryURI`: The URI that library paths (i.e. paths that do not match `/^\.{0,2}\//`) will be requested relative to. Default is `undefined`.
 * `setRequestMaximum`: The maximum number of concurrent requests. Default is `2`.
+* `setLibraryLookupComponent`: A string (such as `"node_modules"`). If defined, libraries will be searched for in parent directories. Default is `undefined`.
 
 ## Behavior ##
 

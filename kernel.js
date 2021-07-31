@@ -26,6 +26,8 @@
   var rootURI = undefined;
   var libraryURI = undefined;
 
+  var libraryLookupComponent = undefined;
+
   var JSONP_TIMEOUT = 60 * 1000;
 
   function CircularDependencyError(message) {
@@ -198,6 +200,44 @@
 
   function setLibraryURI(URI) {
     libraryURI = (URI.charAt(URI.length-1) == '/' ? URI : URI + '/');
+  }
+
+  function setLibraryLookupComponent(component) {
+    component = component && component.toString();
+    if (!component) {
+      libraryLookupComponent = undefined;
+    } else if (component.match(/\//)) {
+      throw new ArgumentError("Invalid path component.");
+    } else {
+      libraryLookupComponent = component;
+    }
+  }
+
+  // If a `libraryLookupComponent` is defined, then library modules should
+  // be looked at in every parent directory (roughly).
+  function searchPathsForModulePath(path, basePath) {
+    path = normalizePath(path);
+
+    // Should look for nearby libarary modules.
+    if (path.charAt(0) != '/' && libraryLookupComponent) {
+      var paths = [];
+      var components = basePath.split('/');
+
+      while (components.length > 1) {
+        if (components[components.length-1] == libraryLookupComponent) {
+          components.pop();
+        }
+        var searchPath = normalizePath(fullyQualifyPath(
+            './'+libraryLookupComponent+'/' + path, components.join('/') + '/'
+        ));
+        paths.push(searchPath);
+        components.pop();
+      }
+      paths.push(path);
+      return paths;
+    } else {
+      return [normalizePath(fullyQualifyPath(path, basePath))];
+    }
   }
 
   function URIForModulePath(path) {
@@ -610,9 +650,15 @@
   }
 
   /* Require */
-  function _designatedRequire(path, continuation) {
+  function _designatedRequire(path, continuation, relativeTo) {
+    var paths = searchPathsForModulePath(path, relativeTo);
+
     if (continuation === undefined) {
-      var module = moduleAtPathSync(path);
+      var module;
+      for (var i = 0, ii = paths.length; i < ii && !module; i++) {
+        var path = paths[i];
+        module = moduleAtPathSync(path);
+      }
       if (!module) {
         throw new Error("The module at \"" + path + "\" does not exist.");
       }
@@ -623,9 +669,17 @@
       }
 
       flushDeferAfter(function () {
-        moduleAtPath(path, function (module) {
-          continuation(module && module.exports);
-        });
+        function search() {
+          var path = paths.shift();
+          return moduleAtPath(path, function (module) {
+            if (module || paths.length == 0) {
+              continuation(module && module.exports);
+            } else {
+              search();
+            }
+          })
+        }
+        search();
       });
     }
   }
@@ -639,7 +693,7 @@
   function requireRelative(basePath, qualifiedPath, continuation) {
     qualifiedPath = qualifiedPath.toString();
     var path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
-    return designatedRequire(path, continuation);
+    return designatedRequire(path, continuation, basePath);
   }
 
   function requireRelativeN(basePath, qualifiedPaths, continuation) {
@@ -696,6 +750,7 @@
   rootRequire.setGlobalKeyPath = setGlobalKeyPath;
   rootRequire.setRootURI = setRootURI;
   rootRequire.setLibraryURI = setLibraryURI;
+  rootRequire.setLibraryLookupComponent = setLibraryLookupComponent;
 
   return rootRequire;
 }())
