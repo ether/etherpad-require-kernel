@@ -513,16 +513,10 @@
   }
 
   function _moduleAtPath(path, fetchFunc, continuation) {
-    // hack fix temporary in for etherpad #2505
-    if(path === "ep_etherpad-lite/static/js/pad.js") path = "ep_etherpad-lite/static/js/pad";
-    // Making the below change saves on 2 http requests
-    // and also 1 per plugin and nothing seems to b0rk?
-    // This code is run on the client only
-    // var suffixes = ['', '.js', '/index.js'];
-    var suffixes = ['.js', '/index.js'];
-    if (path.charAt(path.length - 1) == '/') {
-      suffixes = ['index.js'];
-    }
+    const suffixes =
+        path.endsWith('.js') ? ['']
+        : path.endsWith('/') ? ['index.js']
+        : ['.js', '/index.js', ''];
     var i = 0, ii = suffixes.length;
     var _find = function (i) {
       if (i < ii) {
