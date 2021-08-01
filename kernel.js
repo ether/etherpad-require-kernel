@@ -416,13 +416,8 @@
 
     // Handle failure of JSONP request.
     if (JSONP_TIMEOUT < Infinity) {
-      var timeoutId = setTimeout(function () {
-        timeoutId = undefined;
-        define(path, null);
-      }, JSONP_TIMEOUT);
-      definitionWaiters[path].unshift(function () {
-        timeoutId === undefined && clearTimeout(timeoutId);
-      });
+      const timeoutId = setTimeout(() => define(path, null), JSONP_TIMEOUT);
+      definitionWaiters[path].unshift(() => clearTimeout(timeoutId));
     }
 
     head.insertBefore(script, head.firstChild);
