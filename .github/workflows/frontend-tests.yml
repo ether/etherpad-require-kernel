@@ -1,0 +1,93 @@
+# Publicly credit Sauce Labs because they generously support open source
+# projects.
+name: "frontend tests powered by Sauce Labs"
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Generate Sauce Labs strings
+      id: sauce_strings
+      run: |
+        printf %s\\n '::set-output name=name::${{github.event.repository.name}} ${{ github.workflow }} - ${{ github.job }}'
+        printf %s\\n '::set-output name=tunnel_id::${{ github.run_id }}-${{ github.run_number }}-${{ github.job }}'
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: 12
+
+    - name: Check out Etherpad core
+      uses: actions/checkout@v2
+      with:
+        repository: ether/etherpad-lite
+        path: etherpad
+
+    - name: Install Etherpad core dependencies
+      run: etherpad/src/bin/installDeps.sh
+
+    - name: Create settings.json
+      run: |
+        cd etherpad
+        cp settings.json.template settings.json
+
+    - name: Disable import/export rate limiting
+      run: |
+        cd etherpad
+        sed -e '/^ *"importExportRateLimiting":/,/^ *\}/ s/"max":.*/"max": 0/' -i settings.json
+
+    - name: Check out package
+      uses: actions/checkout@v2
+      with:
+        path: __tmp
+
+    - name: export GIT_HASH to env
+      id: environment
+      run: |
+        cd __tmp
+        echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
+
+    - name: Determine package name
+      id: package_name
+      run: |
+        cd __tmp
+        npx -c 'printf %s\\n "::set-output name=package_name::${npm_package_name}"'
+
+    - name: Rename package directory
+      env:
+        PACKAGE_NAME: ${{ steps.package_name.outputs.package_name }}
+      run: |
+        mv __tmp "${PACKAGE_NAME}"
+
+    - name: Install package dependencies
+      env:
+        PACKAGE_NAME: ${{ steps.package_name.outputs.package_name }}
+      run: |
+        cd "${PACKAGE_NAME}"
+        npm ci
+
+    - name: Use package
+      env:
+        PACKAGE_NAME: ${{ steps.package_name.outputs.package_name }}
+      run: |
+        cd etherpad/src
+        npm i "${PACKAGE_NAME}"@file:../../"${PACKAGE_NAME}"
+
+    - uses: saucelabs/sauce-connect-action@v1
+      with:
+        username: ${{ secrets.SAUCE_USERNAME }}
+        accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+        tunnelIdentifier: ${{ steps.sauce_strings.outputs.tunnel_id }}
+
+    - name: Run the frontend tests
+      shell: bash
+      env:
+        SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+        SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+        SAUCE_NAME: ${{ steps.sauce_strings.outputs.name }}
+        TRAVIS_JOB_NUMBER: ${{ steps.sauce_strings.outputs.tunnel_id }}
+        GIT_HASH: ${{ steps.environment.outputs.sha_short }}
+      run: |
+        etherpad/src/tests/frontend/travis/runner.sh
