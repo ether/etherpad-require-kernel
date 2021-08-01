@@ -1,4 +1,4 @@
-/*!
+/* !
 
   require-kernel
 
@@ -7,7 +7,7 @@
 
 */
 
-var MockRequire = require('./mock_require');
+const MockRequire = require('./mock_require');
 
 exports.kernelSource = MockRequire.kernelSource;
 exports.requireForPaths = MockRequire.requireForPaths;

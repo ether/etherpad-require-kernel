@@ -1,4 +1,4 @@
-/*!
+/* !
 
   require-kernel
 
@@ -7,46 +7,46 @@
 
 */
 
-var fs = require('fs');
-var pathutil = require('path');
-var urlutil = require('url');
-var events = require('events');
+const fs = require('fs');
+const pathutil = require('path');
+const urlutil = require('url');
+const events = require('events');
 
-var kernelPath = pathutil.join(__dirname, 'kernel.js');
-var kernel = fs.readFileSync(kernelPath, 'utf8');
+const kernelPath = pathutil.join(__dirname, 'kernel.js');
+const kernel = fs.readFileSync(kernelPath, 'utf8');
 
-var buildKernel = require('vm').runInThisContext(
-  '(function (XMLHttpRequest) {return ' + kernel + '})', kernelPath);
+const buildKernel = require('vm').runInThisContext(
+    `(function (XMLHttpRequest) {return ${kernel}})`, kernelPath);
 
 /* Cheap URL request implementation */
-var fs_client = (new function () {
-  var STATUS_MESSAGES = {
-    403: '403: Access denied.'
-  , 404: '404: File not found.'
-  , 405: '405: Only the HEAD or GET methods are allowed.'
-  , 500: '500: Error reading file.'
+const fs_client = (new function () {
+  const STATUS_MESSAGES = {
+    403: '403: Access denied.',
+    404: '404: File not found.',
+    405: '405: Only the HEAD or GET methods are allowed.',
+    500: '500: Error reading file.',
   };
 
   function request(options, callback) {
-    var path = fsPathForURIPath(options.path);
-    var method = options.method;
+    const path = fsPathForURIPath(options.path);
+    const method = options.method;
 
-    var response = new (require('events').EventEmitter);
-    response.setEncoding = function (encoding) {this._encoding = encoding};
+    const response = new (require('events').EventEmitter)();
+    response.setEncoding = function (encoding) { this._encoding = encoding; };
     response.statusCode = 504;
     response.headers = {};
 
-    var request = new (require('events').EventEmitter);
+    const request = new (require('events').EventEmitter)();
     request.end = function () {
       if (options.method != 'HEAD' && options.method != 'GET') {
         response.statusCode = 405;
-        response.headers['Allow'] = 'HEAD, GET';
+        response.headers.Allow = 'HEAD, GET';
 
         callback(response);
-        response.emit('data', STATUS_MESSAGES[response.statusCode])
+        response.emit('data', STATUS_MESSAGES[response.statusCode]);
         response.emit('end');
       } else {
-        fs.stat(path, function (error, stats) {
+        fs.stat(path, (error, stats) => {
           if (error) {
             if (error.code == 'ENOENT') {
               response.StatusCode = 404;
@@ -56,15 +56,15 @@ var fs_client = (new function () {
               response.StatusCode = 502;
             }
           } else if (stats.isFile()) {
-            var date = new Date()
-            var modifiedLast = new Date(stats.mtime);
-            var modifiedSince = (options.headers || {})['if-modified-since'];
+            const date = new Date();
+            const modifiedLast = new Date(stats.mtime);
+            const modifiedSince = (options.headers || {})['if-modified-since'];
 
-            response.headers['Date'] = date.toUTCString();
+            response.headers.Date = date.toUTCString();
             response.headers['Last-Modified'] = modifiedLast.toUTCString();
 
-            if (modifiedSince && modifiedLast
-                && modifiedSince >= modifiedLast) {
+            if (modifiedSince && modifiedLast &&
+                modifiedSince >= modifiedLast) {
               response.StatusCode = 304;
             } else {
               response.statusCode = 200;
@@ -80,10 +80,10 @@ var fs_client = (new function () {
             response.headers['Content-Type'] = 'text/plain; charset=utf-8';
 
             callback(response);
-            response.emit('data', STATUS_MESSAGES[response.statusCode])
+            response.emit('data', STATUS_MESSAGES[response.statusCode]);
             response.emit('end');
           } else {
-            fs.readFile(path, function (error, text) {
+            fs.readFile(path, (error, text) => {
               if (error) {
                 if (error.code == 'ENOENT') {
                   response.statusCode = 404;
@@ -95,7 +95,7 @@ var fs_client = (new function () {
                 response.headers['Content-Type'] = 'text/plain; charset=utf-8';
 
                 callback(response);
-                response.emit('data', STATUS_MESSAGES[response.statusCode])
+                response.emit('data', STATUS_MESSAGES[response.statusCode]);
                 response.emit('end');
               } else {
                 response.statusCode = 200;
@@ -117,8 +117,8 @@ var fs_client = (new function () {
 }());
 
 function requestURL(url, method, headers, callback) {
-  var parsedURL = urlutil.parse(url);
-  var client = undefined;
+  const parsedURL = urlutil.parse(url);
+  let client = undefined;
   if (parsedURL.protocol == 'file:') {
     client = fs_client;
   } else if (parsedURL.protocol == 'http:') {
@@ -127,27 +127,27 @@ function requestURL(url, method, headers, callback) {
     client = require('https');
   }
   if (client) {
-    var request = client.request({
-      host: parsedURL.host
-    , port: parsedURL.port
-    , path: parsedURL.path
-    , method: method
-    , headers: headers
-    }, function (response) {
-      var buffer = undefined;
+    const request = client.request({
+      host: parsedURL.host,
+      port: parsedURL.port,
+      path: parsedURL.path,
+      method,
+      headers,
+    }, (response) => {
+      let buffer = undefined;
       response.setEncoding('utf8');
-      response.on('data', function (chunk) {
+      response.on('data', (chunk) => {
         buffer = buffer || '';
         buffer += chunk;
       });
-      response.on('close', function () {
+      response.on('close', () => {
         callback(502, {});
       });
-      response.on('end', function () {
+      response.on('end', () => {
         callback(response.statusCode, response.headers, buffer);
       });
     });
-    request.on('error', function () {
+    request.on('error', () => {
       callback(502, {});
     });
     request.end();
@@ -164,7 +164,7 @@ function fsPathForURIPath(path) {
 }
 
 function normalizePathAsURI(path) {
-  var parsedUrl = urlutil.parse(path);
+  const parsedUrl = urlutil.parse(path);
   if (parsedUrl.protocol == null) {
     parsedUrl.protocol = 'file:';
     parsedUrl.path = pathutil.resolve(parsedUrl.path);
@@ -172,19 +172,19 @@ function normalizePathAsURI(path) {
   return urlutil.format(parsedUrl);
 }
 
-var buildMockXMLHttpRequestClass = function () {
-  var emitter = new events.EventEmitter();
-  var requestCount = 0;
-  var idleTimer = undefined;
-  var idleHandler = function () {
+const buildMockXMLHttpRequestClass = function () {
+  const emitter = new events.EventEmitter();
+  let requestCount = 0;
+  let idleTimer = undefined;
+  const idleHandler = function () {
     emitter.emit('idle');
   };
-  var requested = function (info) {
+  const requested = function (info) {
     clearTimeout(idleTimer);
     requestCount++;
     emitter.emit('requested', info);
   };
-  var responded = function (info) {
+  const responded = function (info) {
     emitter.emit('responded', info);
     requestCount--;
     if (requestCount == 0) {
@@ -192,20 +192,20 @@ var buildMockXMLHttpRequestClass = function () {
     }
   };
 
-  var MockXMLHttpRequest = function () {
+  const MockXMLHttpRequest = function () {
   };
   MockXMLHttpRequest.prototype = new function () {
-    this.open = function(method, url, async) {
+    this.open = function (method, url, async) {
       this.async = async;
       this.url = normalizePathAsURI(url);
-    }
+    };
     this.withCredentials = false; // Pass CORS capability checks.
     this.send = function () {
-      var parsedURL = urlutil.parse(this.url);
+      const parsedURL = urlutil.parse(this.url);
 
-      var info = {
-        async: !!this.async
-      , url: this.url
+      const info = {
+        async: !!this.async,
+        url: this.url,
       };
 
       if (!this.async) {
@@ -213,7 +213,7 @@ var buildMockXMLHttpRequestClass = function () {
           requested(info);
           try {
             this.status = 200;
-            var path = fsPathForURIPath(parsedURL.pathname);
+            const path = fsPathForURIPath(parsedURL.pathname);
             this.responseText = fs.readFileSync(path);
           } catch (e) {
             this.status = 404;
@@ -221,33 +221,33 @@ var buildMockXMLHttpRequestClass = function () {
           this.readyState = 4;
           responded(info);
         } else {
-          throw "The resource at " + JSON.stringify(this.url)
-            + " cannot be retrieved synchronously.";
+          throw `The resource at ${JSON.stringify(this.url)
+          } cannot be retrieved synchronously.`;
         }
       } else {
-        var self = this;
+        const self = this;
         requestURL(this.url, 'GET', {},
-          function (status, headers, content) {
-            self.status = status;
-            self.responseText = content;
-            self.readyState = 4;
-            var handler = self.onreadystatechange;
-            handler && handler();
-            responded(info);
-          }
+            (status, headers, content) => {
+              self.status = status;
+              self.responseText = content;
+              self.readyState = 4;
+              const handler = self.onreadystatechange;
+              handler && handler();
+              responded(info);
+            }
         );
         requested(info);
       }
-    }
-  };
+    };
+  }();
   MockXMLHttpRequest.emitter = emitter;
 
   return MockXMLHttpRequest;
-}
+};
 
 function requireForPaths(rootPath, libraryPath) {
-  var MockXMLHttpRequest = buildMockXMLHttpRequestClass();
-  var mockRequire = buildKernel(MockXMLHttpRequest);
+  const MockXMLHttpRequest = buildMockXMLHttpRequestClass();
+  const mockRequire = buildKernel(MockXMLHttpRequest);
 
   if (rootPath !== undefined) {
     mockRequire.setRootURI(normalizePathAsURI(rootPath));
@@ -259,9 +259,9 @@ function requireForPaths(rootPath, libraryPath) {
   mockRequire.emitter = MockXMLHttpRequest.emitter;
 
   mockRequire._compileFunction = function (code, filename) {
-    return require('vm').runInThisContext('(function () {'
-      + code + '\n'
-      + '})', filename);
+    return require('vm').runInThisContext(`(function () {${
+      code}\n` +
+      '})', filename);
   };
 
   return mockRequire;

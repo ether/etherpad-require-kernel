@@ -1,5 +1,5 @@
 (function () {
-/*!
+/* !
 
   require-kernel
 
@@ -9,36 +9,36 @@
 */
 
   /* Storage */
-  var main = null; // Reference to main module in `modules`.
-  var modules = {}; // Repository of module objects build from `definitions`.
-  var definitions = {}; // Functions that construct `modules`.
-  var loadingModules = {}; // Locks for detecting circular dependencies.
-  var definitionWaiters = {}; // Locks for clearing duplicate requires.
-  var fetchRequests = []; // Queue of pending requests.
-  var currentRequests = 0; // Synchronization for parallel requests.
-  var maximumRequests = 2; // The maximum number of parallel requests.
-  var deferred = []; // A list of callbacks that can be evaluated eventually.
-  var deferredScheduled = false; // If deferred functions will be executed.
+  let main = null; // Reference to main module in `modules`.
+  const modules = {}; // Repository of module objects build from `definitions`.
+  const definitions = {}; // Functions that construct `modules`.
+  const loadingModules = {}; // Locks for detecting circular dependencies.
+  const definitionWaiters = {}; // Locks for clearing duplicate requires.
+  const fetchRequests = []; // Queue of pending requests.
+  let currentRequests = 0; // Synchronization for parallel requests.
+  let maximumRequests = 2; // The maximum number of parallel requests.
+  const deferred = []; // A list of callbacks that can be evaluated eventually.
+  let deferredScheduled = false; // If deferred functions will be executed.
 
-  var syncLock = undefined;
-  var globalKeyPath = undefined;
+  let syncLock = undefined;
+  let globalKeyPath = undefined;
 
-  var rootURI = undefined;
-  var libraryURI = undefined;
+  let rootURI = undefined;
+  let libraryURI = undefined;
 
-  var libraryLookupComponent = undefined;
+  let libraryLookupComponent = undefined;
 
-  var JSONP_TIMEOUT = 60 * 1000;
+  const JSONP_TIMEOUT = 60 * 1000;
 
   function CircularDependencyError(message) {
-    this.name = "CircularDependencyError";
+    this.name = 'CircularDependencyError';
     this.message = message;
-  };
+  }
   CircularDependencyError.prototype = Error.prototype;
   function ArgumentError(message) {
-    this.name = "ArgumentError";
+    this.name = 'ArgumentError';
     this.message = message;
-  };
+  }
   ArgumentError.prototype = Error.prototype;
 
   /* Utility */
@@ -56,7 +56,7 @@
     // Let exceptions happen, but don't allow them to break notification.
     try {
       while (deferred.length) {
-        var continuation = deferred.shift();
+        const continuation = deferred.shift();
         continuation();
       }
       deferredScheduled = false;
@@ -92,11 +92,11 @@
   }
 
   function normalizePath(path) {
-    var pathComponents1 = path.split('/');
-    var pathComponents2 = [];
+    const pathComponents1 = path.split('/');
+    const pathComponents2 = [];
 
-    var component;
-    for (var i = 0, ii = pathComponents1.length; i < ii; i++) {
+    let component;
+    for (let i = 0, ii = pathComponents1.length; i < ii; i++) {
       component = pathComponents1[i];
       switch (component) {
         case '':
@@ -109,10 +109,10 @@
           // Always skip.
           break;
         case '..':
-          if (pathComponents2.length > 1
-            || (pathComponents2.length == 1
-              && pathComponents2[0] != ''
-              && pathComponents2[0] != '.')) {
+          if (pathComponents2.length > 1 ||
+            (pathComponents2.length == 1 &&
+              pathComponents2[0] != '' &&
+              pathComponents2[0] != '.')) {
             pathComponents2.pop();
             break;
           }
@@ -125,13 +125,13 @@
   }
 
   function fullyQualifyPath(path, basePath) {
-    var fullyQualifiedPath = path;
-    if (path.charAt(0) == '.'
-      && (path.charAt(1) == '/'
-        || (path.charAt(1) == '.' && path.charAt(2) == '/'))) {
+    let fullyQualifiedPath = path;
+    if (path.charAt(0) == '.' &&
+      (path.charAt(1) == '/' ||
+        (path.charAt(1) == '.' && path.charAt(2) == '/'))) {
       if (!basePath) {
         basePath = '';
-      } else if (basePath.charAt(basePath.length-1) != '/') {
+      } else if (basePath.charAt(basePath.length - 1) != '/') {
         basePath += '/';
       }
       fullyQualifiedPath = basePath + path;
@@ -141,13 +141,13 @@
 
   function setRootURI(URI) {
     if (!URI) {
-      throw new ArgumentError("Invalid root URI.");
+      throw new ArgumentError('Invalid root URI.');
     }
-    rootURI = (URI.charAt(URI.length-1) == '/' ? URI.slice(0,-1) : URI);
+    rootURI = (URI.charAt(URI.length - 1) == '/' ? URI.slice(0, -1) : URI);
   }
 
   function setLibraryURI(URI) {
-    libraryURI = (URI.charAt(URI.length-1) == '/' ? URI : URI + '/');
+    libraryURI = (URI.charAt(URI.length - 1) == '/' ? URI : `${URI}/`);
   }
 
   function setLibraryLookupComponent(component) {
@@ -155,7 +155,7 @@
     if (!component) {
       libraryLookupComponent = undefined;
     } else if (component.match(/\//)) {
-      throw new ArgumentError("Invalid path component.");
+      throw new ArgumentError('Invalid path component.');
     } else {
       libraryLookupComponent = component;
     }
@@ -168,15 +168,15 @@
 
     // Should look for nearby libarary modules.
     if (path.charAt(0) != '/' && libraryLookupComponent) {
-      var paths = [];
-      var components = basePath.split('/');
+      const paths = [];
+      const components = basePath.split('/');
 
       while (components.length > 1) {
-        if (components[components.length-1] == libraryLookupComponent) {
+        if (components[components.length - 1] == libraryLookupComponent) {
           components.pop();
         }
-        var searchPath = normalizePath(fullyQualifyPath(
-            './'+libraryLookupComponent+'/' + path, components.join('/') + '/'
+        const searchPath = normalizePath(fullyQualifyPath(
+            `./${libraryLookupComponent}/${path}`, `${components.join('/')}/`
         ));
         paths.push(searchPath);
         components.pop();
@@ -189,22 +189,22 @@
   }
 
   function URIForModulePath(path) {
-    var components = path.split('/');
-    for (var i = 0, ii = components.length; i < ii; i++) {
+    const components = path.split('/');
+    for (let i = 0, ii = components.length; i < ii; i++) {
       components[i] = encodeURIComponent(components[i]);
     }
-    path = components.join('/')
+    path = components.join('/');
 
     if (path.charAt(0) == '/') {
       if (!rootURI) {
-        throw new Error("Attempt to retrieve the root module "
-          + "\""+ path + "\" but no root URI is defined.");
+        throw new Error(`${'Attempt to retrieve the root module ' +
+          '"'}${path}" but no root URI is defined.`);
       }
       return rootURI + path;
     } else {
       if (!libraryURI) {
-        throw new Error("Attempt to retrieve the library module "
-          + "\""+ path + "\" but no libary URI is defined.");
+        throw new Error(`${'Attempt to retrieve the library module ' +
+          '"'}${path}" but no libary URI is defined.`);
       }
       return libraryURI + path;
     }
@@ -215,22 +215,22 @@
   }
 
   function compileFunction(code, filename) {
-    var compileFunction = rootRequire._compileFunction || _compileFunction;
+    const compileFunction = rootRequire._compileFunction || _compileFunction;
     return compileFunction.apply(this, arguments);
   }
 
   /* Remote */
-  function setRequestMaximum (value) {
+  function setRequestMaximum(value) {
     value = parseInt(value);
     if (value > 0) {
       maximumRequests = value;
       checkScheduledfetchDefines();
     } else {
-      throw new ArgumentError("Value must be a positive integer.")
+      throw new ArgumentError('Value must be a positive integer.');
     }
   }
 
-  function setGlobalKeyPath (value) {
+  function setGlobalKeyPath(value) {
     globalKeyPath = value;
   }
 
@@ -246,7 +246,7 @@
 
   function getXHR(uri, async, callback) {
     if (getRandomVersionString()) {
-      uri = uri + `&v=${getRandomVersionString()}`;
+      uri += `&v=${getRandomVersionString()}`;
     }
     const request = new XMLHttpRequest();
     function onComplete(request) {
@@ -276,44 +276,42 @@
     // If cross domain and request doesn't support such requests, go straight
     // to mirroring.
 
-    var _globalKeyPath = globalKeyPath;
+    const _globalKeyPath = globalKeyPath;
 
-    var callback = function (error, text) {
+    const callback = function (error, text) {
       if (error) {
         define(path, null);
+      } else if (_globalKeyPath) {
+        compileFunction(text, path)();
       } else {
-        if (_globalKeyPath) {
-          compileFunction(text, path)();
-        } else {
-          var definition = compileFunction(
-              'return (function (require, exports, module) {'
-            + text + '\n'
-            + '})', path)();
-          define(path, definition);
-        }
+        const definition = compileFunction(
+            `return (function (require, exports, module) {${
+              text}\n` +
+            '})', path)();
+        define(path, definition);
       }
-    }
+    };
 
-    var uri = URIForModulePath(path);
+    let uri = URIForModulePath(path);
     if (_globalKeyPath) {
-      uri += '?callback=' + encodeURIComponent(globalKeyPath + '.define');
+      uri += `?callback=${encodeURIComponent(`${globalKeyPath}.define`)}`;
     }
     getXHR(uri, async, callback);
   }
 
   function fetchDefineJSONP(path) {
-    var head = document.head
-      || document.getElementsByTagName('head')[0]
-      || document.documentElement;
-    var script = document.createElement('script');
+    const head = document.head ||
+      document.getElementsByTagName('head')[0] ||
+      document.documentElement;
+    const script = document.createElement('script');
     if (script.async !== undefined) {
-      script.async = "true";
+      script.async = 'true';
     } else {
-      script.defer = "true";
+      script.defer = 'true';
     }
-    script.type = "application/javascript";
-    script.src = URIForModulePath(path)
-      + '?callback=' + encodeURIComponent(globalKeyPath + '.define');
+    script.type = 'application/javascript';
+    script.src = `${URIForModulePath(path)
+    }?callback=${encodeURIComponent(`${globalKeyPath}.define`)}`;
 
     // Handle failure of JSONP request.
     if (JSONP_TIMEOUT < Infinity) {
@@ -341,16 +339,16 @@
 
   function checkScheduledfetchDefines() {
     if (fetchRequests.length > 0 && currentRequests < maximumRequests) {
-      var fetchRequest = fetchRequests.pop();
+      const fetchRequest = fetchRequests.pop();
       currentRequests++;
-      definitionWaiters[fetchRequest].unshift(function () {
+      definitionWaiters[fetchRequest].unshift(() => {
         currentRequests--;
         checkScheduledfetchDefines();
       });
-      if (globalKeyPath
-        && typeof document !== 'undefined'
-          && document.readyState
-            && /^loaded|complete$/.test(document.readyState)) {
+      if (globalKeyPath &&
+        typeof document !== 'undefined' &&
+          document.readyState &&
+            /^loaded|complete$/.test(document.readyState)) {
         fetchDefineJSONP(fetchRequest);
       } else {
         fetchDefineXHR(fetchRequest, true);
@@ -372,15 +370,15 @@
     //  then replace with exports result.
     if (!moduleIsLoaded(path)) {
       if (hasOwnProperty(loadingModules, path)) {
-        throw new CircularDependencyError("Encountered circular dependency.");
+        throw new CircularDependencyError('Encountered circular dependency.');
       } else if (!moduleIsDefined(path)) {
-        throw new Error("Attempt to load undefined module.");
+        throw new Error('Attempt to load undefined module.');
       } else if (definitions[path] === null) {
         continuation(null);
       } else {
-        var definition = definitions[path];
-        var _module = {id: path, exports: {}};
-        var _require = requireRelativeTo(path);
+        const definition = definitions[path];
+        const _module = {id: path, exports: {}};
+        const _require = requireRelativeTo(path);
         if (!main) {
           main = _module;
         }
@@ -395,7 +393,7 @@
         }
       }
     } else {
-      var module = modules[path];
+      const module = modules[path];
       continuation(module);
     }
   }
@@ -405,26 +403,26 @@
         path.endsWith('.js') ? ['']
         : path.endsWith('/') ? ['index.js']
         : ['.js', '/index.js', ''];
-    var i = 0, ii = suffixes.length;
+    const i = 0; const
+      ii = suffixes.length;
     var _find = function (i) {
       if (i < ii) {
-        var path_ = path + suffixes[i];
-        var after = function () {
-          loadModule(path_, function (module) {
+        const path_ = path + suffixes[i];
+        const after = function () {
+          loadModule(path_, (module) => {
             if (module === null) {
               _find(i + 1);
             } else {
               continuation(module);
             }
           });
-        }
+        };
 
         if (!moduleIsDefined(path_)) {
           fetchFunc(path_, after);
         } else {
           after();
         }
-
       } else {
         continuation(null);
       }
@@ -433,39 +431,39 @@
   }
 
   function moduleAtPath(path, continuation) {
-    defer(function () {
+    defer(() => {
       _moduleAtPath(path, fetchModule, continuation);
     });
   }
 
   function moduleAtPathSync(path) {
-    var module;
-    var oldSyncLock = syncLock;
+    let module;
+    const oldSyncLock = syncLock;
     syncLock = true;
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
-    if(path == "async"){
+    if (path == 'async') {
       // console.warn("path is async and we're doing a ghetto fix");
-      path = "async/lib/async";
+      path = 'async/lib/async';
     }
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
-    if(path == "underscore"){
+    if (path == 'underscore') {
       // console.warn("path is async and we're doing a ghetto fix");
-      path = "underscore/underscore";
+      path = 'underscore/underscore';
     }
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
-    if(path == "unorm"){
+    if (path == 'unorm') {
       // console.warn("path is async and we're doing a ghetto fix");
-      path = "unorm/lib/unorm";
+      path = 'unorm/lib/unorm';
     }
 
     try {
-      _moduleAtPath(path, fetchModuleSync, function (_module) {
+      _moduleAtPath(path, fetchModuleSync, (_module) => {
         module = _module;
       });
     } finally {
@@ -480,10 +478,10 @@
   }
 
   function defineModule(path, module) {
-    if (typeof path != 'string'
-      || !((typeof module == 'function') || module === null)) {
+    if (typeof path !== 'string' ||
+      !((typeof module === 'function') || module === null)) {
       throw new ArgumentError(
-          "Definition must be a (string, function) pair.");
+          'Definition must be a (string, function) pair.');
     }
 
     if (moduleIsDefined(path)) {
@@ -494,10 +492,10 @@
   }
 
   function defineModules(moduleMap) {
-    if (typeof moduleMap != 'object') {
-      throw new ArgumentError("Mapping must be an object.");
+    if (typeof moduleMap !== 'object') {
+      throw new ArgumentError('Mapping must be an object.');
     }
-    for (var path in moduleMap) {
+    for (const path in moduleMap) {
       if (hasOwnProperty(moduleMap, path)) {
         defineModule(path, moduleMap[path]);
       }
@@ -505,7 +503,7 @@
   }
 
   function define(fullyQualifiedPathOrModuleMap, module) {
-    var moduleMap;
+    let moduleMap;
     if (arguments.length == 1) {
       moduleMap = fullyQualifiedPathOrModuleMap;
       defineModules(moduleMap);
@@ -515,14 +513,14 @@
       moduleMap = {};
       moduleMap[path] = module;
     } else {
-      throw new ArgumentError("Expected 1 or 2 arguments, but got "
-          + arguments.length + ".");
+      throw new ArgumentError(`Expected 1 or 2 arguments, but got ${
+        arguments.length}.`);
     }
 
     // With all modules installed satisfy those conditions for all waiters.
     for (var path in moduleMap) {
-      if (hasOwnProperty(moduleMap, path)
-        && hasOwnProperty(definitionWaiters, path)) {
+      if (hasOwnProperty(moduleMap, path) &&
+        hasOwnProperty(definitionWaiters, path)) {
         defer.apply(this, definitionWaiters[path]);
         delete definitionWaiters[path];
       }
@@ -533,33 +531,33 @@
 
   /* Require */
   function _designatedRequire(path, continuation, relativeTo) {
-    var paths = searchPathsForModulePath(path, relativeTo);
+    const paths = searchPathsForModulePath(path, relativeTo);
 
     if (continuation === undefined) {
-      var module;
-      for (var i = 0, ii = paths.length; i < ii && !module; i++) {
+      let module;
+      for (let i = 0, ii = paths.length; i < ii && !module; i++) {
         var path = paths[i];
         module = moduleAtPathSync(path);
       }
       if (!module) {
-        throw new Error("The module at \"" + path + "\" does not exist.");
+        throw new Error(`The module at "${path}" does not exist.`);
       }
       return module.exports;
     } else {
-      if (!(typeof continuation == 'function')) {
-        throw new ArgumentError("Continuation must be a function.");
+      if (!(typeof continuation === 'function')) {
+        throw new ArgumentError('Continuation must be a function.');
       }
 
-      flushDeferAfter(function () {
+      flushDeferAfter(() => {
         function search() {
-          var path = paths.shift();
-          return moduleAtPath(path, function (module) {
+          const path = paths.shift();
+          return moduleAtPath(path, (module) => {
             if (module || paths.length == 0) {
               continuation(module && module.exports);
             } else {
               search();
             }
-          })
+          });
         }
         search();
       });
@@ -567,27 +565,27 @@
   }
 
   function designatedRequire(path, continuation) {
-    var designatedRequire =
+    const designatedRequire =
         rootRequire._designatedRequire || _designatedRequire;
     return designatedRequire.apply(this, arguments);
   }
 
   function requireRelative(basePath, qualifiedPath, continuation) {
     qualifiedPath = qualifiedPath.toString();
-    var path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
+    const path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
     return designatedRequire(path, continuation, basePath);
   }
 
   function requireRelativeN(basePath, qualifiedPaths, continuation) {
-    if (!(typeof continuation == 'function')) {
-      throw new ArgumentError("Final argument must be a continuation.");
+    if (!(typeof continuation === 'function')) {
+      throw new ArgumentError('Final argument must be a continuation.');
     } else {
       // Copy and validate parameters
-      var _qualifiedPaths = [];
+      const _qualifiedPaths = [];
       for (var i = 0, ii = qualifiedPaths.length; i < ii; i++) {
         _qualifiedPaths[i] = qualifiedPaths[i].toString();
       }
-      var results = [];
+      const results = [];
       function _require(result) {
         results.push(result);
         if (qualifiedPaths.length > 0) {
@@ -606,8 +604,8 @@
     basePath = basePath.replace(/[^\/]+$/, '');
     function require(qualifiedPath, continuation) {
       if (arguments.length > 2) {
-        var qualifiedPaths = Array.prototype.slice.call(arguments, 0, -1);
-        var continuation = arguments[arguments.length-1];
+        const qualifiedPaths = Array.prototype.slice.call(arguments, 0, -1);
+        var continuation = arguments[arguments.length - 1];
         return requireRelativeN(basePath, qualifiedPaths, continuation);
       } else {
         return requireRelative(basePath, qualifiedPath, continuation);
@@ -616,7 +614,7 @@
     require.main = main;
 
     return require;
-  }
+  };
 
   var rootRequire = requireRelativeTo('/');
 
@@ -635,4 +633,4 @@
   rootRequire.setLibraryLookupComponent = setLibraryLookupComponent;
 
   return rootRequire;
-}())
+}());
