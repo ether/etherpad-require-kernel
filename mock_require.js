@@ -165,7 +165,7 @@ function fsPathForURIPath(path) {
 
 function normalizePathAsURI(path) {
   var parsedUrl = urlutil.parse(path);
-  if (parsedUrl.protocol === undefined) {
+  if (parsedUrl.protocol == null) {
     parsedUrl.protocol = 'file:';
     parsedUrl.path = pathutil.resolve(parsedUrl.path);
   }
