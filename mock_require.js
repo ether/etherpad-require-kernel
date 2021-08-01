@@ -1,11 +1,9 @@
-/* !
-
-  require-kernel
-
-  Created by Chad Weider on 01/04/11.
-  Released to the Public Domain on 17/01/12.
-
-*/
+/*
+ * require-kernel
+ *
+ * Created by Chad Weider on 01/04/11.
+ * Released to the Public Domain on 17/01/12.
+ */
 
 const fs = require('fs');
 const pathutil = require('path');
