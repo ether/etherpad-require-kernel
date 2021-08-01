@@ -1,4 +1,15 @@
-(function () {
+/* eslint-disable strict */ (function () {
+  // The contents of this file are evaluated as the right-hand side of an assignment expression
+  // (this file is not loaded as a module or in a <script> element). Because of this unusual
+  // evaluation, strict mode cannot be enabled outside the IIFE.
+  //
+  // Note: Enabling strict mode here does not affect strict mode of code passed to a Function
+  // constructor, so it does not cause modules to load in strict mode.
+  //
+  // Warning: Strict mode changes eval's behavior, and the behavior of the code evaluated, so the
+  // require kernel must not use eval to load modules if strict mode is enabled.
+  'use strict';
+
   /*
    * require-kernel
    *
@@ -631,4 +642,4 @@
   rootRequire.setLibraryLookupComponent = setLibraryLookupComponent;
 
   return rootRequire;
-}());
+}()); /* eslint-enable strict */
