@@ -273,7 +273,7 @@
 
   /* Remote */
   function setRequestMaximum (value) {
-    value == parseInt(value);
+    value = parseInt(value);
     if (value > 0) {
       maximumRequests = value;
       checkScheduledfetchDefines();
