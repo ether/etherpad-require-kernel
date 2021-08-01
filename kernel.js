@@ -1,4 +1,4 @@
-/* eslint-disable strict */ (function () {
+/* eslint-disable strict */ (() => {
   // The contents of this file are evaluated as the right-hand side of an assignment expression
   // (this file is not loaded as a module or in a <script> element). Because of this unusual
   // evaluation, strict mode cannot be enabled outside the IIFE.
@@ -51,17 +51,13 @@
   ArgumentError.prototype = Error.prototype;
 
   /* Utility */
-  function hasOwnProperty(object, key) {
-    // Object-independent because an object may define `hasOwnProperty`.
-    return Object.prototype.hasOwnProperty.call(object, key);
-  }
+  // Object-independent because an object may define `hasOwnProperty`.
+  const hasOwnProperty = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 
   /* Deferral */
-  function defer(f_1, f_2, f_n) {
-    deferred.push.apply(deferred, arguments);
-  }
+  const defer = (...fns) => deferred.push(...fns);
 
-  function _flushDefer() {
+  const _flushDefer = () => {
     // Let exceptions happen, but don't allow them to break notification.
     try {
       while (deferred.length) {
@@ -73,9 +69,9 @@
       deferredScheduled = deferred.length > 0;
       deferred.length && setTimeout(_flushDefer, 0);
     }
-  }
+  };
 
-  function flushDefer() {
+  const flushDefer = () => {
     if (!deferredScheduled && deferred.length > 0) {
       if (syncLock) {
         // Only asynchronous operations will wait on this condition so schedule
@@ -86,9 +82,9 @@
         _flushDefer();
       }
     }
-  }
+  };
 
-  function flushDeferAfter(f) {
+  const flushDeferAfter = (f) => {
     try {
       deferredScheduled = true;
       f();
@@ -98,9 +94,9 @@
       deferredScheduled = false;
       deferred.length && setTimeout(flushDefer, 0);
     }
-  }
+  };
 
-  function normalizePath(path) {
+  const normalizePath = (path) => {
     const pathComponents1 = path.split('/');
     const pathComponents2 = [];
 
@@ -109,7 +105,7 @@
       component = pathComponents1[i];
       switch (component) {
         case '':
-          if (i == 0 || i == ii - 1) {
+          if (i === 0 || i === ii - 1) {
             // This indicates a leading or trailing slash.
             pathComponents2.push(component);
           }
@@ -119,47 +115,48 @@
           break;
         case '..':
           if (pathComponents2.length > 1 ||
-            (pathComponents2.length == 1 &&
-              pathComponents2[0] != '' &&
-              pathComponents2[0] != '.')) {
+              (pathComponents2.length === 1 &&
+               pathComponents2[0] !== '' &&
+               pathComponents2[0] !== '.')) {
             pathComponents2.pop();
             break;
           }
+          // Fall through:
         default:
           pathComponents2.push(component);
       }
     }
 
     return pathComponents2.join('/');
-  }
+  };
 
-  function fullyQualifyPath(path, basePath) {
+  const fullyQualifyPath = (path, basePath) => {
     let fullyQualifiedPath = path;
-    if (path.charAt(0) == '.' &&
-      (path.charAt(1) == '/' ||
-        (path.charAt(1) == '.' && path.charAt(2) == '/'))) {
+    if (path.charAt(0) === '.' &&
+        (path.charAt(1) === '/' ||
+         (path.charAt(1) === '.' && path.charAt(2) === '/'))) {
       if (!basePath) {
         basePath = '';
-      } else if (basePath.charAt(basePath.length - 1) != '/') {
+      } else if (basePath.charAt(basePath.length - 1) !== '/') {
         basePath += '/';
       }
       fullyQualifiedPath = basePath + path;
     }
     return fullyQualifiedPath;
-  }
+  };
 
-  function setRootURI(URI) {
+  const setRootURI = (URI) => {
     if (!URI) {
       throw new ArgumentError('Invalid root URI.');
     }
-    rootURI = (URI.charAt(URI.length - 1) == '/' ? URI.slice(0, -1) : URI);
-  }
+    rootURI = URI.charAt(URI.length - 1) === '/' ? URI.slice(0, -1) : URI;
+  };
 
-  function setLibraryURI(URI) {
-    libraryURI = (URI.charAt(URI.length - 1) == '/' ? URI : `${URI}/`);
-  }
+  const setLibraryURI = (URI) => {
+    libraryURI = URI.charAt(URI.length - 1) === '/' ? URI : `${URI}/`;
+  };
 
-  function setLibraryLookupComponent(component) {
+  const setLibraryLookupComponent = (component) => {
     component = component && component.toString();
     if (!component) {
       libraryLookupComponent = undefined;
@@ -168,20 +165,20 @@
     } else {
       libraryLookupComponent = component;
     }
-  }
+  };
 
   // If a `libraryLookupComponent` is defined, then library modules should
   // be looked at in every parent directory (roughly).
-  function searchPathsForModulePath(path, basePath) {
+  const searchPathsForModulePath = (path, basePath) => {
     path = normalizePath(path);
 
     // Should look for nearby libarary modules.
-    if (path.charAt(0) != '/' && libraryLookupComponent) {
+    if (path.charAt(0) !== '/' && libraryLookupComponent) {
       const paths = [];
       const components = basePath.split('/');
 
       while (components.length > 1) {
-        if (components[components.length - 1] == libraryLookupComponent) {
+        if (components[components.length - 1] === libraryLookupComponent) {
           components.pop();
         }
         const searchPath = normalizePath(fullyQualifyPath(
@@ -195,41 +192,36 @@
     } else {
       return [normalizePath(fullyQualifyPath(path, basePath))];
     }
-  }
+  };
 
-  function URIForModulePath(path) {
+  const uriForModulePath = (path) => {
     const components = path.split('/');
     for (let i = 0, ii = components.length; i < ii; i++) {
       components[i] = encodeURIComponent(components[i]);
     }
     path = components.join('/');
 
-    if (path.charAt(0) == '/') {
+    if (path.charAt(0) === '/') {
       if (!rootURI) {
-        throw new Error(`${'Attempt to retrieve the root module ' +
-          '"'}${path}" but no root URI is defined.`);
+        throw new Error(
+            `Attempt to retrieve the root module "${path}" but no root URI is defined.`);
       }
       return rootURI + path;
     } else {
       if (!libraryURI) {
-        throw new Error(`${'Attempt to retrieve the library module ' +
-          '"'}${path}" but no libary URI is defined.`);
+        throw new Error(
+            `Attempt to retrieve the library module "${path}" but no libary URI is defined.`);
       }
       return libraryURI + path;
     }
-  }
+  };
 
-  function _compileFunction(code, filename) {
-    return new Function(code);
-  }
+  const _compileFunction = (code, filename) => new Function(code);
 
-  function compileFunction(code, filename) {
-    const compileFunction = rootRequire._compileFunction || _compileFunction;
-    return compileFunction.apply(this, arguments);
-  }
+  const compileFunction = (...args) => (rootRequire._compileFunction || _compileFunction)(...args);
 
   /* Remote */
-  function setRequestMaximum(value) {
+  const setRequestMaximum = (value) => {
     value = parseInt(value);
     if (value > 0) {
       maximumRequests = value;
@@ -237,11 +229,11 @@
     } else {
       throw new ArgumentError('Value must be a positive integer.');
     }
-  }
+  };
 
-  function setGlobalKeyPath(value) {
+  const setGlobalKeyPath = (value) => {
     globalKeyPath = value;
-  }
+  };
 
   let randomVersionString = null;
   const getRandomVersionString = () => {
@@ -253,24 +245,24 @@
     return randomVersionString;
   };
 
-  function getXHR(uri, async, callback) {
+  const getXHR = (uri, async, callback) => {
     if (getRandomVersionString()) {
       uri += `&v=${getRandomVersionString()}`;
     }
     const request = new XMLHttpRequest();
-    function onComplete(request) {
+    const onComplete = (request) => {
       // Build module constructor.
-      if (request.status == 200) {
+      if (request.status === 200) {
         callback(undefined, request.responseText);
       } else {
         callback(true, undefined);
       }
-    }
+    };
 
     request.open('GET', uri, !!(async));
     if (async) {
-      request.onreadystatechange = function (event) {
-        if (request.readyState == 4) {
+      request.onreadystatechange = (event) => {
+        if (request.readyState === 4) {
           onComplete(request);
         }
       };
@@ -279,36 +271,34 @@
       request.send(null);
       onComplete(request);
     }
-  }
+  };
 
-  function fetchDefineXHR(path, async) {
+  const fetchDefineXHR = (path, async) => {
     // If cross domain and request doesn't support such requests, go straight
     // to mirroring.
 
     const _globalKeyPath = globalKeyPath;
 
-    const callback = function (error, text) {
+    const callback = (error, text) => {
       if (error) {
         define(path, null);
       } else if (_globalKeyPath) {
         compileFunction(text, path)();
       } else {
-        const definition = compileFunction(
-            `return (function (require, exports, module) {${
-              text}\n` +
-            '})', path)();
+        const definition =
+            compileFunction(`return (function (require, exports, module) {${text}\n})`, path)();
         define(path, definition);
       }
     };
 
-    let uri = URIForModulePath(path);
+    let uri = uriForModulePath(path);
     if (_globalKeyPath) {
       uri += `?callback=${encodeURIComponent(`${globalKeyPath}.define`)}`;
     }
     getXHR(uri, async, callback);
-  }
+  };
 
-  function fetchDefineJSONP(path) {
+  const fetchDefineJSONP = (path) => {
     const head = document.head ||
       document.getElementsByTagName('head')[0] ||
       document.documentElement;
@@ -319,8 +309,7 @@
       script.defer = 'true';
     }
     script.type = 'application/javascript';
-    script.src = `${URIForModulePath(path)
-    }?callback=${encodeURIComponent(`${globalKeyPath}.define`)}`;
+    script.src = `${uriForModulePath(path)}?callback=${encodeURIComponent(globalKeyPath)}.define`;
 
     // Handle failure of JSONP request.
     if (JSONP_TIMEOUT < Infinity) {
@@ -329,24 +318,24 @@
     }
 
     head.insertBefore(script, head.firstChild);
-  }
+  };
 
   /* Modules */
-  function fetchModule(path, continuation) {
+  const fetchModule = (path, continuation) => {
     if (hasOwnProperty(definitionWaiters, path)) {
       definitionWaiters[path].push(continuation);
     } else {
       definitionWaiters[path] = [continuation];
       schedulefetchDefine(path);
     }
-  }
+  };
 
-  function schedulefetchDefine(path) {
+  const schedulefetchDefine = (path) => {
     fetchRequests.push(path);
     checkScheduledfetchDefines();
-  }
+  };
 
-  function checkScheduledfetchDefines() {
+  const checkScheduledfetchDefines = () => {
     if (fetchRequests.length > 0 && currentRequests < maximumRequests) {
       const fetchRequest = fetchRequests.pop();
       currentRequests++;
@@ -363,18 +352,16 @@
         fetchDefineXHR(fetchRequest, true);
       }
     }
-  }
+  };
 
-  function fetchModuleSync(path, continuation) {
+  const fetchModuleSync = (path, continuation) => {
     fetchDefineXHR(path, false);
     continuation();
-  }
+  };
 
-  function moduleIsLoaded(path) {
-    return hasOwnProperty(modules, path);
-  }
+  const moduleIsLoaded = (path) => hasOwnProperty(modules, path);
 
-  function loadModule(path, continuation) {
+  const loadModule = (path, continuation) => {
     // If it's a function then it hasn't been exported yet. Run function and
     //  then replace with exports result.
     if (!moduleIsLoaded(path)) {
@@ -382,7 +369,7 @@
         throw new CircularDependencyError('Encountered circular dependency.');
       } else if (!moduleIsDefined(path)) {
         throw new Error('Attempt to load undefined module.');
-      } else if (definitions[path] === null) {
+      } else if (definitions[path] === null) { // eslint-disable-line eqeqeq
         continuation(null);
       } else {
         const definition = definitions[path];
@@ -405,21 +392,20 @@
       const module = modules[path];
       continuation(module);
     }
-  }
+  };
 
-  function _moduleAtPath(path, fetchFunc, continuation) {
+  const _moduleAtPath = (path, fetchFunc, continuation) => {
     const suffixes =
         path.endsWith('.js') ? ['']
         : path.endsWith('/') ? ['index.js']
         : ['.js', '/index.js', ''];
-    const i = 0; const
-      ii = suffixes.length;
-    var _find = function (i) {
+    const ii = suffixes.length;
+    const _find = (i) => {
       if (i < ii) {
         const path_ = path + suffixes[i];
-        const after = function () {
+        const after = () => {
           loadModule(path_, (module) => {
-            if (module === null) {
+            if (module === null) { // eslint-disable-line eqeqeq
               _find(i + 1);
             } else {
               continuation(module);
@@ -437,36 +423,36 @@
       }
     };
     _find(0);
-  }
+  };
 
-  function moduleAtPath(path, continuation) {
+  const moduleAtPath = (path, continuation) => {
     defer(() => {
       _moduleAtPath(path, fetchModule, continuation);
     });
-  }
+  };
 
-  function moduleAtPathSync(path) {
+  const moduleAtPathSync = (path) => {
     let module;
     const oldSyncLock = syncLock;
     syncLock = true;
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
-    if (path == 'async') {
+    if (path === 'async') {
       // console.warn("path is async and we're doing a ghetto fix");
       path = 'async/lib/async';
     }
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
-    if (path == 'underscore') {
+    if (path === 'underscore') {
       // console.warn("path is async and we're doing a ghetto fix");
       path = 'underscore/underscore';
     }
 
     // HACK TODO
     // This is completely the wrong way to do it but for now it shows it works
-    if (path == 'unorm') {
+    if (path === 'unorm') {
       // console.warn("path is async and we're doing a ghetto fix");
       path = 'unorm/lib/unorm';
     }
@@ -479,18 +465,15 @@
       syncLock = oldSyncLock;
     }
     return module;
-  }
+  };
 
   /* Definition */
-  function moduleIsDefined(path) {
-    return hasOwnProperty(definitions, path);
-  }
+  const moduleIsDefined = (path) => hasOwnProperty(definitions, path);
 
-  function defineModule(path, module) {
+  const defineModule = (path, module) => {
     if (typeof path !== 'string' ||
-      !((typeof module === 'function') || module === null)) {
-      throw new ArgumentError(
-          'Definition must be a (string, function) pair.');
+        !((typeof module === 'function') || module === null)) { // eslint-disable-line eqeqeq
+      throw new ArgumentError('Definition must be a (string, function) pair.');
     }
 
     if (moduleIsDefined(path)) {
@@ -498,9 +481,9 @@
     } else {
       definitions[path] = module;
     }
-  }
+  };
 
-  function defineModules(moduleMap) {
+  const defineModules = (moduleMap) => {
     if (typeof moduleMap !== 'object') {
       throw new ArgumentError('Mapping must be an object.');
     }
@@ -509,43 +492,40 @@
         defineModule(path, moduleMap[path]);
       }
     }
-  }
+  };
 
-  function define(fullyQualifiedPathOrModuleMap, module) {
+  const define = (...args) => {
     let moduleMap;
-    if (arguments.length == 1) {
-      moduleMap = fullyQualifiedPathOrModuleMap;
+    if (args.length === 1) {
+      [moduleMap] = args;
       defineModules(moduleMap);
-    } else if (arguments.length == 2) {
-      var path = fullyQualifiedPathOrModuleMap;
-      defineModule(fullyQualifiedPathOrModuleMap, module);
-      moduleMap = {};
-      moduleMap[path] = module;
+    } else if (args.length === 2) {
+      const [path, module] = args;
+      defineModule(path, module);
+      moduleMap = {[path]: module};
     } else {
-      throw new ArgumentError(`Expected 1 or 2 arguments, but got ${
-        arguments.length}.`);
+      throw new ArgumentError(`Expected 1 or 2 arguments, but got ${args.length}.`);
     }
 
     // With all modules installed satisfy those conditions for all waiters.
-    for (var path in moduleMap) {
-      if (hasOwnProperty(moduleMap, path) &&
-        hasOwnProperty(definitionWaiters, path)) {
-        defer.apply(this, definitionWaiters[path]);
+    for (const path in moduleMap) {
+      if (hasOwnProperty(moduleMap, path) && hasOwnProperty(definitionWaiters, path)) {
+        defer(...definitionWaiters[path]);
         delete definitionWaiters[path];
       }
     }
 
     flushDefer();
-  }
+  };
 
   /* Require */
-  function _designatedRequire(path, continuation, relativeTo) {
+  const _designatedRequire = (path, continuation, relativeTo) => {
     const paths = searchPathsForModulePath(path, relativeTo);
 
     if (continuation === undefined) {
       let module;
       for (let i = 0, ii = paths.length; i < ii && !module; i++) {
-        var path = paths[i];
+        const path = paths[i];
         module = moduleAtPathSync(path);
       }
       if (!module) {
@@ -558,74 +538,69 @@
       }
 
       flushDeferAfter(() => {
-        function search() {
+        const search = () => {
           const path = paths.shift();
           return moduleAtPath(path, (module) => {
-            if (module || paths.length == 0) {
+            if (module || paths.length === 0) {
               continuation(module && module.exports);
             } else {
               search();
             }
           });
-        }
+        };
         search();
       });
     }
-  }
+  };
 
-  function designatedRequire(path, continuation) {
-    const designatedRequire =
-        rootRequire._designatedRequire || _designatedRequire;
-    return designatedRequire.apply(this, arguments);
-  }
+  const designatedRequire =
+      (...args) => (rootRequire._designatedRequire || _designatedRequire)(...args);
 
-  function requireRelative(basePath, qualifiedPath, continuation) {
+  const requireRelative = (basePath, qualifiedPath, continuation) => {
     qualifiedPath = qualifiedPath.toString();
     const path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
     return designatedRequire(path, continuation, basePath);
-  }
+  };
 
-  function requireRelativeN(basePath, qualifiedPaths, continuation) {
+  const requireRelativeN = (basePath, qualifiedPaths, continuation) => {
     if (!(typeof continuation === 'function')) {
       throw new ArgumentError('Final argument must be a continuation.');
     } else {
       // Copy and validate parameters
-      const _qualifiedPaths = [];
-      for (var i = 0, ii = qualifiedPaths.length; i < ii; i++) {
-        _qualifiedPaths[i] = qualifiedPaths[i].toString();
-      }
+      const _qualifiedPaths = qualifiedPaths.map((p) => p.toString());
       const results = [];
-      function _require(result) {
+      const _require = (result) => {
         results.push(result);
         if (qualifiedPaths.length > 0) {
           requireRelative(basePath, qualifiedPaths.shift(), _require);
         } else {
-          continuation.apply(this, results);
+          continuation(...results);
         }
-      }
-      for (var i = 0, ii = qualifiedPaths.length; i < ii; i++) {
+      };
+      for (let i = 0; i < qualifiedPaths.length; i++) {
         requireRelative(basePath, _qualifiedPaths[i], _require);
       }
     }
-  }
+  };
 
-  var requireRelativeTo = function (basePath) {
-    basePath = basePath.replace(/[^\/]+$/, '');
-    function require(qualifiedPath, continuation) {
-      if (arguments.length > 2) {
-        const qualifiedPaths = Array.prototype.slice.call(arguments, 0, -1);
-        var continuation = arguments[arguments.length - 1];
+  const requireRelativeTo = (basePath) => {
+    basePath = basePath.replace(/[^/]+$/, '');
+    const require = (...args) => {
+      if (args.length > 2) {
+        const continuation = args.pop();
+        const qualifiedPaths = args;
         return requireRelativeN(basePath, qualifiedPaths, continuation);
       } else {
+        const [qualifiedPath, continuation] = args;
         return requireRelative(basePath, qualifiedPath, continuation);
       }
-    }
+    };
     require.main = main;
 
     return require;
   };
 
-  var rootRequire = requireRelativeTo('/');
+  const rootRequire = requireRelativeTo('/');
 
   /* Private internals */
   rootRequire._modules = modules;
@@ -642,4 +617,4 @@
   rootRequire.setLibraryLookupComponent = setLibraryLookupComponent;
 
   return rootRequire;
-}()); /* eslint-enable strict */
+})(); /* eslint-enable strict */

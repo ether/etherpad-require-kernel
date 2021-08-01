@@ -19,7 +19,7 @@ const buildKernel = require('vm').runInThisContext(
     `(function (XMLHttpRequest) {return ${kernel}})`, kernelPath);
 
 /* Cheap URL request implementation */
-const fs_client = (new function () {
+const fsClient = (new function () {
   const STATUS_MESSAGES = {
     403: '403: Access denied.',
     404: '404: File not found.',
@@ -27,7 +27,7 @@ const fs_client = (new function () {
     500: '500: Error reading file.',
   };
 
-  function request(options, callback) {
+  this.request = (options, callback) => {
     const path = fsPathForURIPath(options.path);
     const method = options.method;
 
@@ -37,8 +37,8 @@ const fs_client = (new function () {
     response.headers = {};
 
     const request = new (require('events').EventEmitter)();
-    request.end = function () {
-      if (options.method != 'HEAD' && options.method != 'GET') {
+    request.end = () => {
+      if (options.method !== 'HEAD' && options.method !== 'GET') {
         response.statusCode = 405;
         response.headers.Allow = 'HEAD, GET';
 
@@ -48,9 +48,9 @@ const fs_client = (new function () {
       } else {
         fs.stat(path, (error, stats) => {
           if (error) {
-            if (error.code == 'ENOENT') {
+            if (error.code === 'ENOENT') {
               response.StatusCode = 404;
-            } else if (error.code == 'EACCESS') {
+            } else if (error.code === 'EACCESS') {
               response.StatusCode = 403;
             } else {
               response.StatusCode = 502;
@@ -73,10 +73,10 @@ const fs_client = (new function () {
             response.StatusCode = 404;
           }
 
-          if (method == 'HEAD') {
+          if (method === 'HEAD') {
             callback(response);
             response.emit('end');
-          } else if (response.statusCode != 200) {
+          } else if (response.statusCode !== 200) {
             response.headers['Content-Type'] = 'text/plain; charset=utf-8';
 
             callback(response);
@@ -85,9 +85,9 @@ const fs_client = (new function () {
           } else {
             fs.readFile(path, (error, text) => {
               if (error) {
-                if (error.code == 'ENOENT') {
+                if (error.code === 'ENOENT') {
                   response.statusCode = 404;
-                } else if (error.code == 'EACCESS') {
+                } else if (error.code === 'EACCESS') {
                   response.statusCode = 403;
                 } else {
                   response.statusCode = 502;
@@ -112,18 +112,17 @@ const fs_client = (new function () {
       }
     };
     return request;
-  }
-  this.request = request;
+  };
 }());
 
-function requestURL(url, method, headers, callback) {
+const requestURL = (url, method, headers, callback) => {
   const parsedURL = urlutil.parse(url);
   let client = undefined;
-  if (parsedURL.protocol == 'file:') {
-    client = fs_client;
-  } else if (parsedURL.protocol == 'http:') {
+  if (parsedURL.protocol === 'file:') {
+    client = fsClient;
+  } else if (parsedURL.protocol === 'http:') {
     client = require('http');
-  } else if (parsedURL.protocol == 'https:') {
+  } else if (parsedURL.protocol === 'https:') {
     client = require('https');
   }
   if (client) {
@@ -152,42 +151,42 @@ function requestURL(url, method, headers, callback) {
     });
     request.end();
   }
-}
+};
 
-function fsPathForURIPath(path) {
+const fsPathForURIPath = (path) => {
   path = decodeURIComponent(path);
-  if (path.charAt(0) == '/') { // Account for '/C:\Windows' type of paths.
+  if (path.charAt(0) === '/') { // Account for '/C:\Windows' type of paths.
     path = pathutil.resolve('/', path.slice(1));
   }
   path = pathutil.normalize(path);
   return path;
-}
+};
 
-function normalizePathAsURI(path) {
+const normalizePathAsURI = (path) => {
   const parsedUrl = urlutil.parse(path);
   if (parsedUrl.protocol == null) {
     parsedUrl.protocol = 'file:';
     parsedUrl.path = pathutil.resolve(parsedUrl.path);
   }
   return urlutil.format(parsedUrl);
-}
+};
 
-const buildMockXMLHttpRequestClass = function () {
+const buildMockXMLHttpRequestClass = () => {
   const emitter = new events.EventEmitter();
   let requestCount = 0;
   let idleTimer = undefined;
-  const idleHandler = function () {
+  const idleHandler = () => {
     emitter.emit('idle');
   };
-  const requested = function (info) {
+  const requested = (info) => {
     clearTimeout(idleTimer);
     requestCount++;
     emitter.emit('requested', info);
   };
-  const responded = function (info) {
+  const responded = (info) => {
     emitter.emit('responded', info);
     requestCount--;
-    if (requestCount == 0) {
+    if (requestCount === 0) {
       idleTimer = setTimeout(idleHandler, 0);
     }
   };
@@ -209,7 +208,7 @@ const buildMockXMLHttpRequestClass = function () {
       };
 
       if (!this.async) {
-        if (parsedURL.protocol == 'file:') {
+        if (parsedURL.protocol === 'file:') {
           requested(info);
           try {
             this.status = 200;
@@ -221,8 +220,8 @@ const buildMockXMLHttpRequestClass = function () {
           this.readyState = 4;
           responded(info);
         } else {
-          throw `The resource at ${JSON.stringify(this.url)
-          } cannot be retrieved synchronously.`;
+          throw new Error(
+              `The resource at ${JSON.stringify(this.url)} cannot be retrieved synchronously.`);
         }
       } else {
         const self = this;
@@ -245,27 +244,24 @@ const buildMockXMLHttpRequestClass = function () {
   return MockXMLHttpRequest;
 };
 
-function requireForPaths(rootPath, libraryPath) {
+const requireForPaths = (rootPath, libraryPath) => {
   const MockXMLHttpRequest = buildMockXMLHttpRequestClass();
   const mockRequire = buildKernel(MockXMLHttpRequest);
 
   if (rootPath !== undefined) {
     mockRequire.setRootURI(normalizePathAsURI(rootPath));
   }
-  if (libraryPath != undefined) {
+  if (libraryPath !== undefined) {
     mockRequire.setLibraryURI(normalizePathAsURI(libraryPath));
   }
 
   mockRequire.emitter = MockXMLHttpRequest.emitter;
 
-  mockRequire._compileFunction = function (code, filename) {
-    return require('vm').runInThisContext(`(function () {${
-      code}\n` +
-      '})', filename);
-  };
+  mockRequire._compileFunction =
+      (code, filename) => require('vm').runInThisContext(`(function () {${code}\n})`, filename);
 
   return mockRequire;
-}
+};
 
 exports.kernelSource = kernel;
 exports.requireForPaths = requireForPaths;
