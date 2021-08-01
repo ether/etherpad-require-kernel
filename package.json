@@ -4,6 +4,7 @@
   "homepage": "https://github.com/ether/etherpad-require-kernel",
   "keywords": [
     "commonjs",
+    "etherpad",
     "require",
     "loader",
     "editor"
