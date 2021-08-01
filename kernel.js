@@ -306,22 +306,14 @@
     return xmlhttp;
   }
 
-  let randomVersionString;
+  let randomVersionString = null;
   const getRandomVersionString = () => {
-    let win = window;
-
-    // check the current window first, relevant for parent/pad.html requires
-    if (win.clientVars && win.clientVars.randomVersionString)
-      randomVersionString = win.clientVars.randomVersionString;
-    if (randomVersionString) return randomVersionString;
-
-    while (win !== window.top) {
-      win = win.parent;
-      if (win.clientVars) {
-        randomVersionString = win.clientVars.randomVersionString;
-        return randomVersionString;
-      }
+    if (typeof window === 'undefined') return null;
+    for (let win = window; randomVersionString == null; win = win.parent) {
+      ({clientVars: {randomVersionString} = {}} = win);
+      if (win === window.top) break;
     }
+    return randomVersionString;
   };
 
   function getXHR(uri, async, callback, request) {
