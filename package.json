@@ -23,5 +23,11 @@
   "readmeFilename": "README.md",
   "bugs": {
     "url": "https://github.com/ether/etherpad-require-kernel/issues"
+  },
+  "devDependencies": {
+    "mocha": "^9.0.3"
+  },
+  "scripts": {
+    "test": "mocha test/*.js"
   }
 }
