@@ -216,7 +216,28 @@
     }
   };
 
-  const compileFunction = (code, filename) => new Function(code);
+  // Returns a function that behaves like `(f) => f()` and whose name property is `name`.
+  //
+  // This is used to improve the readability of stack traces containing anonymous functions. It
+  // works by taking advantage of an ES6 feature: When an anonymous function expression is assigned
+  // to a variable or an object property, the function's `.name` property is set to the variable
+  // name or object property name.
+  //
+  // For example, instead of:
+  //     const x = computeThing(arg);
+  // you could do:
+  //     const x = stackDecorator('this name appears in the stack')(computeThing.bind(null, arg));
+  // If computeThing() throws, you would see "this name appears in the stack" in the stack trace.
+  const stackDecorator = (name) => ({[name]: (f) => f()})[name];
+
+  // The first argument is a helpful hint that will appear in the stack trace if there is a syntax
+  // error. The remaining arguments are passed to Function().
+  const compileFunction = (name, ...args) => {
+    // `Function.bind(null, ...args)` is used instead of `() => new Function(...args)` to improve
+    // the readability of the stack trace by avoiding an extra anonymous function in the stack.
+    const f = Function.bind(null, ...args);
+    return stackDecorator(name)(f);
+  };
 
   /* Remote */
   const setRequestMaximum = (value) => {
@@ -281,11 +302,19 @@
       if (error) {
         define(path, null);
       } else if (_globalKeyPath) {
-        compileFunction(text, path)();
+        // The space in the name argument passed to compileFunction() is important: When displaying
+        // a stack trace in the developer console, Firefox (as of v90) does some mysterious
+        // processing that sometimes chops off the first part of the function's `.name` property.
+        // The logic seems arbitrary -- it's not simply keeping "good" characters. For example, "foo
+        // bar.js" is printed in its entirety, but "foobar.js" becomes "js". Introducing a space
+        // seems to cause Firefox to reliably print the entire name. (The `Error.stack` property
+        // does not suffer from this problem -- the complete name is always included.)
+        compileFunction(`(bundle ${path})`, text)();
       } else {
-        const definition =
-            compileFunction(`return (function (require, exports, module) {${text}\n})`, path)();
-        define(path, definition);
+        // See the above comment for the importance of the space in the name passed to
+        // compileFunction().
+        const def = compileFunction(`(module ${path})`, 'require', 'exports', 'module', text);
+        define(path, def);
       }
     };
 
