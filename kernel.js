@@ -355,7 +355,7 @@
       callback(true, undefined);
     });
     xdr.onload(function () {
-      callback(undefined, request.responseText);
+      callback(undefined, xdr.responseText);
     });
     xdr.send();
   }
