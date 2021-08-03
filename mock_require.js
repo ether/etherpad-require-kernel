@@ -9,7 +9,6 @@
 
 const fs = require('fs');
 const pathutil = require('path');
-const urlutil = require('url');
 const events = require('events');
 
 const kernelPath = pathutil.join(__dirname, 'kernel.js');
@@ -116,7 +115,7 @@ const fsClient = (new function () {
 }());
 
 const requestURL = (url, method, headers, callback) => {
-  const parsedURL = urlutil.parse(url);
+  const parsedURL = new URL(url);
   let client = undefined;
   if (parsedURL.protocol === 'file:') {
     client = fsClient;
@@ -129,7 +128,7 @@ const requestURL = (url, method, headers, callback) => {
     const request = client.request({
       host: parsedURL.host,
       port: parsedURL.port,
-      path: parsedURL.path,
+      path: parsedURL.pathname + parsedURL.search,
       method,
       headers,
     }, (response) => {
@@ -163,12 +162,9 @@ const fsPathForURIPath = (path) => {
 };
 
 const normalizePathAsURI = (path) => {
-  const parsedUrl = urlutil.parse(path);
-  if (parsedUrl.protocol == null) {
-    parsedUrl.protocol = 'file:';
-    parsedUrl.path = pathutil.resolve(parsedUrl.path);
-  }
-  return urlutil.format(parsedUrl);
+  const parsedUrl = new URL(path, 'file:///');
+  if (parsedUrl.protocol === 'file:') parsedUrl.pathname = pathutil.resolve(parsedUrl.pathname);
+  return parsedUrl.href;
 };
 
 const buildMockXMLHttpRequestClass = () => {
@@ -200,7 +196,7 @@ const buildMockXMLHttpRequestClass = () => {
     };
     this.withCredentials = false; // Pass CORS capability checks.
     this.send = function () {
-      const parsedURL = urlutil.parse(this.url);
+      const parsedURL = new URL(this.url);
 
       const info = {
         async: !!this.async,
