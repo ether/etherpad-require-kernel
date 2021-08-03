@@ -187,15 +187,13 @@ const buildMockXMLHttpRequestClass = () => {
     }
   };
 
-  const MockXMLHttpRequest = function () {
-  };
-  MockXMLHttpRequest.prototype = new function () {
-    this.open = function (method, url, async) {
+  const MockXMLHttpRequest = class {
+    open(method, url, async) {
       this.async = async;
       this.url = normalizePathAsURI(url);
-    };
-    this.withCredentials = false; // Pass CORS capability checks.
-    this.send = function () {
+    }
+
+    send() {
       const parsedURL = new URL(this.url);
 
       const info = {
@@ -233,9 +231,10 @@ const buildMockXMLHttpRequestClass = () => {
         );
         requested(info);
       }
-    };
-  }();
+    }
+  };
   MockXMLHttpRequest.emitter = emitter;
+  MockXMLHttpRequest.withCredentials = false; // Pass CORS capability checks.
 
   return MockXMLHttpRequest;
 };
