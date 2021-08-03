@@ -91,58 +91,6 @@
     }
   }
 
-  // See RFC 2396 Appendix B
-  var URI_EXPRESSION =
-      /^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
-  function parseURI(uri) {
-    var match = uri.match(URI_EXPRESSION);
-    var location = match && {
-      scheme: match[2],
-      host: match[4],
-      path: match[5],
-      query: match[7],
-      fragment: match[9]
-    };
-    return location;
-  }
-
-  function joinURI(location) {
-    var uri = "";
-    if (location.scheme)
-      uri += location.scheme + ':';
-    if (location.host)
-      uri += "//" + location.host
-    if (location.host && location.path && location.path.charAt(0) != '/')
-      uri += "/"
-    if (location.path)
-      uri += location.path
-    if (location.query)
-      uri += "?" + location.query
-    if (uri.fragment)
-      uri += "#" + location.fragment
-
-    return uri;
-  }
-
-  function isSameDomain(uri) {
-    var host_uri =
-      (typeof location == "undefined") ? {} : parseURI(location.toString());
-    var uri = parseURI(uri);
-
-    return (!uri.scheme && !uri.host)
-        || (uri.scheme === host_uri.scheme) && (uri.host === host_uri.host);
-  }
-
-  function mirroredURIForURI(uri) {
-    var host_uri =
-      (typeof location == "undefined") ? {} : parseURI(location.toString());
-    var uri = parseURI(uri);
-
-    uri.scheme = host_uri.scheme;
-    uri.host = host_uri.host;
-    return joinURI(uri);
-  }
-
   function normalizePath(path) {
     var pathComponents1 = path.split('/');
     var pathComponents2 = [];
@@ -286,26 +234,6 @@
     globalKeyPath = value;
   }
 
-  var XMLHttpFactories = [
-    function () {return new XMLHttpRequest()},
-    function () {return new ActiveXObject("Msxml2.XMLHTTP")},
-    function () {return new ActiveXObject("Msxml3.XMLHTTP")},
-    function () {return new ActiveXObject("Microsoft.XMLHTTP")}
-  ];
-
-  function createXMLHTTPObject() {
-    var xmlhttp = false;
-    for (var i = 0, ii = XMLHttpFactories.length; i < ii; i++) {
-      try {
-        xmlhttp = XMLHttpFactories[i]();
-      } catch (error) {
-        continue;
-      }
-      break;
-    }
-    return xmlhttp;
-  }
-
   let randomVersionString = null;
   const getRandomVersionString = () => {
     if (typeof window === 'undefined') return null;
@@ -316,15 +244,11 @@
     return randomVersionString;
   };
 
-  function getXHR(uri, async, callback, request) {
+  function getXHR(uri, async, callback) {
     if (getRandomVersionString()) {
       uri = uri + `&v=${getRandomVersionString()}`;
     }
-    var request = request || createXMLHTTPObject();
-    if (!request) {
-      throw new Error("Error making remote request.")
-    }
-
+    const request = new XMLHttpRequest();
     function onComplete(request) {
       // Build module constructor.
       if (request.status == 200) {
@@ -346,18 +270,6 @@
       request.send(null);
       onComplete(request);
     }
-  }
-
-  function getXDR(uri, callback) {
-    var xdr = new XDomainRequest();
-    xdr.open('GET', uri);
-    xdr.error(function () {
-      callback(true, undefined);
-    });
-    xdr.onload(function () {
-      callback(undefined, xdr.responseText);
-    });
-    xdr.send();
   }
 
   function fetchDefineXHR(path, async) {
@@ -386,18 +298,7 @@
     if (_globalKeyPath) {
       uri += '?callback=' + encodeURIComponent(globalKeyPath + '.define');
     }
-    if (isSameDomain(uri)) {
-      getXHR(uri, async, callback);
-    } else {
-      var request = createXMLHTTPObject();
-      if (request && request.withCredentials !== undefined) {
-        getXHR(uri, async, callback, request);
-      } else if (async && (typeof XDomainRequest != "undefined")) {
-        getXDR(uri, callback);
-      } else {
-        getXHR(mirroredURIForURI(uri), async, callback);
-      }
-    }
+    getXHR(uri, async, callback);
   }
 
   function fetchDefineJSONP(path) {
