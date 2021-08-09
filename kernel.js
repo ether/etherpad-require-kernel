@@ -216,9 +216,7 @@
     }
   };
 
-  const _compileFunction = (code, filename) => new Function(code);
-
-  const compileFunction = (...args) => (rootRequire._compileFunction || _compileFunction)(...args);
+  const compileFunction = (code, filename) => new Function(code);
 
   /* Remote */
   const setRequestMaximum = (value) => {
@@ -606,7 +604,6 @@
   rootRequire._modules = modules;
   rootRequire._definitions = definitions;
   rootRequire._designatedRequire = _designatedRequire;
-  rootRequire._compileFunction = _compileFunction;
 
   /* Public interface */
   rootRequire.define = define;
