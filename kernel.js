@@ -18,6 +18,7 @@
    */
 
   /* Storage */
+  const aliases = new Map(); // Maps a module alias to its target (e.g., foo => foo/index.js).
   let main = null; // Reference to main module in `modules`.
   const modules = {}; // Repository of module objects build from `definitions`.
   const definitions = {}; // Functions that construct `modules`.
@@ -130,6 +131,19 @@
     return pathComponents2.join('/');
   };
 
+  // Like normalizePath, except if the normalized path is an alias for another path then the
+  // (normalized) real path is returned.
+  const realPath = (path) => {
+    let target = normalizePath(path);
+    const seen = new Set([target]);
+    while (aliases.has(target)) {
+      target = aliases.get(target);
+      if (seen.has(target)) throw new Error(`alias loop while resolving ${path}`);
+      seen.add(target);
+    }
+    return target;
+  };
+
   const fullyQualifyPath = (path, basePath) => {
     let fullyQualifiedPath = path;
     if (path.startsWith('./') || path.startsWith('../')) {
@@ -179,14 +193,14 @@
         if (components[components.length - 1] === libraryLookupComponent) {
           components.pop();
         }
-        paths.push(normalizePath(
+        paths.push(realPath(
             fullyQualifyPath(`./${libraryLookupComponent}/${path}`, `${components.join('/')}/`)));
         components.pop();
       }
-      paths.push(path);
+      paths.push(realPath(path));
       return paths;
     } else {
-      return [normalizePath(fullyQualifyPath(path, basePath))];
+      return [realPath(fullyQualifyPath(path, basePath))];
     }
   };
 
@@ -491,8 +505,19 @@
   const defineModule = (path, module) => {
     if (typeof path !== 'string') throw new ArgumentError('path must be a string');
     path = normalizePath(path);
+    const target = aliases.get(path);
+    if (typeof module === 'string') {
+      if (moduleIsDefined(path)) throw new Error(`module ${path} is already defined`);
+      const norm = normalizePath(module);
+      if (target && target !== norm) {
+        throw new Error(`conflicting definition of alias ${path} (${target} and ${norm})`);
+      }
+      aliases.set(path, norm);
+      return;
+    }
+    if (target) throw new Error(`module ${path} is already an alias of ${target}`);
     if (module !== null && typeof module !== 'function') { // eslint-disable-line eqeqeq
-      throw new ArgumentError('definition must be a function or null');
+      throw new ArgumentError('definition must be a string (if an alias), function, or null');
     }
 
     if (moduleIsDefined(path)) {
@@ -577,7 +602,7 @@
 
   const requireRelative = (basePath, qualifiedPath, continuation) => {
     qualifiedPath = qualifiedPath.toString();
-    const path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
+    const path = realPath(fullyQualifyPath(qualifiedPath, basePath));
     return designatedRequire(path, continuation, basePath);
   };
 
