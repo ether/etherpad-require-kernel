@@ -179,10 +179,8 @@
         if (components[components.length - 1] === libraryLookupComponent) {
           components.pop();
         }
-        const searchPath = normalizePath(fullyQualifyPath(
-            `./${libraryLookupComponent}/${path}`, `${components.join('/')}/`
-        ));
-        paths.push(searchPath);
+        paths.push(normalizePath(
+            fullyQualifyPath(`./${libraryLookupComponent}/${path}`, `${components.join('/')}/`)));
         components.pop();
       }
       paths.push(path);
@@ -324,9 +322,8 @@
   };
 
   const fetchDefineJSONP = (path) => {
-    const head = document.head ||
-      document.getElementsByTagName('head')[0] ||
-      document.documentElement;
+    const head =
+        document.head || document.getElementsByTagName('head')[0] || document.documentElement;
     const script = document.createElement('script');
     if (script.async !== undefined) {
       script.async = 'true';
@@ -368,10 +365,8 @@
         currentRequests--;
         checkScheduledfetchDefines();
       });
-      if (globalKeyPath &&
-        typeof document !== 'undefined' &&
-          document.readyState &&
-            /^loaded|complete$/.test(document.readyState)) {
+      if (globalKeyPath && typeof document !== 'undefined' && document.readyState &&
+          /^loaded|complete$/.test(document.readyState)) {
         fetchDefineJSONP(fetchRequest);
       } else {
         fetchDefineXHR(fetchRequest, true);
