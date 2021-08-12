@@ -489,9 +489,10 @@
   const moduleIsDefined = (path) => hasOwnProperty(definitions, path);
 
   const defineModule = (path, module) => {
-    if (typeof path !== 'string' ||
-        !((typeof module === 'function') || module === null)) { // eslint-disable-line eqeqeq
-      throw new ArgumentError('Definition must be a (string, function) pair.');
+    if (typeof path !== 'string') throw new ArgumentError('path must be a string');
+    path = normalizePath(path);
+    if (module !== null && typeof module !== 'function') { // eslint-disable-line eqeqeq
+      throw new ArgumentError('definition must be a function or null');
     }
 
     if (moduleIsDefined(path)) {
