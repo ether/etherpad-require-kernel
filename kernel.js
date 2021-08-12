@@ -322,8 +322,6 @@
   };
 
   const fetchDefineJSONP = (path) => {
-    const head =
-        document.head || document.getElementsByTagName('head')[0] || document.documentElement;
     const script = document.createElement('script');
     if (script.async !== undefined) {
       script.async = 'true';
@@ -339,7 +337,7 @@
       definitionWaiters[path].unshift(() => clearTimeout(timeoutId));
     }
 
-    head.insertBefore(script, head.firstChild);
+    document.head.insertBefore(script, document.head.firstChild);
   };
 
   /* Modules */
