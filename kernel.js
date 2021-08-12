@@ -132,12 +132,10 @@
 
   const fullyQualifyPath = (path, basePath) => {
     let fullyQualifiedPath = path;
-    if (path.charAt(0) === '.' &&
-        (path.charAt(1) === '/' ||
-         (path.charAt(1) === '.' && path.charAt(2) === '/'))) {
+    if (path.startsWith('./') || path.startsWith('../')) {
       if (!basePath) {
         basePath = '';
-      } else if (basePath.charAt(basePath.length - 1) !== '/') {
+      } else if (!basePath.endsWith('/')) {
         basePath += '/';
       }
       fullyQualifiedPath = basePath + path;
@@ -149,11 +147,11 @@
     if (!URI) {
       throw new ArgumentError('Invalid root URI.');
     }
-    rootURI = URI.charAt(URI.length - 1) === '/' ? URI.slice(0, -1) : URI;
+    rootURI = URI.endsWith('/') ? URI.slice(0, -1) : URI;
   };
 
   const setLibraryURI = (URI) => {
-    libraryURI = URI.charAt(URI.length - 1) === '/' ? URI : `${URI}/`;
+    libraryURI = URI.endsWith('/') ? URI : `${URI}/`;
   };
 
   const setLibraryLookupComponent = (component) => {
@@ -173,7 +171,7 @@
     path = normalizePath(path);
 
     // Should look for nearby libarary modules.
-    if (path.charAt(0) !== '/' && libraryLookupComponent) {
+    if (!path.startsWith('/') && libraryLookupComponent) {
       const paths = [];
       const components = basePath.split('/');
 
@@ -201,7 +199,7 @@
     }
     path = components.join('/');
 
-    if (path.charAt(0) === '/') {
+    if (path.startsWith('/')) {
       if (!rootURI) {
         throw new Error(
             `Attempt to retrieve the root module "${path}" but no root URI is defined.`);
