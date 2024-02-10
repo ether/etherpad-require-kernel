@@ -18,6 +18,7 @@
    */
 
   /* Storage */
+  const aliases = new Map(); // Maps a module alias to its target (e.g., foo => foo/index.js).
   let main = null; // Reference to main module in `modules`.
   const modules = {}; // Repository of module objects build from `definitions`.
   const definitions = {}; // Functions that construct `modules`.
@@ -130,14 +131,25 @@
     return pathComponents2.join('/');
   };
 
+  // Like normalizePath, except if the normalized path is an alias for another path then the
+  // (normalized) real path is returned.
+  const realPath = (path) => {
+    let target = normalizePath(path);
+    const seen = new Set([target]);
+    while (aliases.has(target)) {
+      target = aliases.get(target);
+      if (seen.has(target)) throw new Error(`alias loop while resolving ${path}`);
+      seen.add(target);
+    }
+    return target;
+  };
+
   const fullyQualifyPath = (path, basePath) => {
     let fullyQualifiedPath = path;
-    if (path.charAt(0) === '.' &&
-        (path.charAt(1) === '/' ||
-         (path.charAt(1) === '.' && path.charAt(2) === '/'))) {
+    if (path.startsWith('./') || path.startsWith('../')) {
       if (!basePath) {
         basePath = '';
-      } else if (basePath.charAt(basePath.length - 1) !== '/') {
+      } else if (!basePath.endsWith('/')) {
         basePath += '/';
       }
       fullyQualifiedPath = basePath + path;
@@ -149,11 +161,11 @@
     if (!URI) {
       throw new ArgumentError('Invalid root URI.');
     }
-    rootURI = URI.charAt(URI.length - 1) === '/' ? URI.slice(0, -1) : URI;
+    rootURI = URI.endsWith('/') ? URI.slice(0, -1) : URI;
   };
 
   const setLibraryURI = (URI) => {
-    libraryURI = URI.charAt(URI.length - 1) === '/' ? URI : `${URI}/`;
+    libraryURI = URI.endsWith('/') ? URI : `${URI}/`;
   };
 
   const setLibraryLookupComponent = (component) => {
@@ -173,7 +185,7 @@
     path = normalizePath(path);
 
     // Should look for nearby libarary modules.
-    if (path.charAt(0) !== '/' && libraryLookupComponent) {
+    if (!path.startsWith('/') && libraryLookupComponent) {
       const paths = [];
       const components = basePath.split('/');
 
@@ -181,16 +193,14 @@
         if (components[components.length - 1] === libraryLookupComponent) {
           components.pop();
         }
-        const searchPath = normalizePath(fullyQualifyPath(
-            `./${libraryLookupComponent}/${path}`, `${components.join('/')}/`
-        ));
-        paths.push(searchPath);
+        paths.push(realPath(
+            fullyQualifyPath(`./${libraryLookupComponent}/${path}`, `${components.join('/')}/`)));
         components.pop();
       }
-      paths.push(path);
+      paths.push(realPath(path));
       return paths;
     } else {
-      return [normalizePath(fullyQualifyPath(path, basePath))];
+      return [realPath(fullyQualifyPath(path, basePath))];
     }
   };
 
@@ -201,7 +211,7 @@
     }
     path = components.join('/');
 
-    if (path.charAt(0) === '/') {
+    if (path.startsWith('/')) {
       if (!rootURI) {
         throw new Error(
             `Attempt to retrieve the root module "${path}" but no root URI is defined.`);
@@ -326,9 +336,6 @@
   };
 
   const fetchDefineJSONP = (path) => {
-    const head = document.head ||
-      document.getElementsByTagName('head')[0] ||
-      document.documentElement;
     const script = document.createElement('script');
     if (script.async !== undefined) {
       script.async = 'true';
@@ -344,7 +351,7 @@
       definitionWaiters[path].unshift(() => clearTimeout(timeoutId));
     }
 
-    head.insertBefore(script, head.firstChild);
+    document.head.insertBefore(script, document.head.firstChild);
   };
 
   /* Modules */
@@ -370,10 +377,8 @@
         currentRequests--;
         checkScheduledfetchDefines();
       });
-      if (globalKeyPath &&
-        typeof document !== 'undefined' &&
-          document.readyState &&
-            /^loaded|complete$/.test(document.readyState)) {
+      if (globalKeyPath && typeof document !== 'undefined' && document.readyState &&
+          /^loaded|complete$/.test(document.readyState)) {
         fetchDefineJSONP(fetchRequest);
       } else {
         fetchDefineXHR(fetchRequest, true);
@@ -498,9 +503,21 @@
   const moduleIsDefined = (path) => hasOwnProperty(definitions, path);
 
   const defineModule = (path, module) => {
-    if (typeof path !== 'string' ||
-        !((typeof module === 'function') || module === null)) { // eslint-disable-line eqeqeq
-      throw new ArgumentError('Definition must be a (string, function) pair.');
+    if (typeof path !== 'string') throw new ArgumentError('path must be a string');
+    path = normalizePath(path);
+    const target = aliases.get(path);
+    if (typeof module === 'string') {
+      if (moduleIsDefined(path)) throw new Error(`module ${path} is already defined`);
+      const norm = normalizePath(module);
+      if (target && target !== norm) {
+        throw new Error(`conflicting definition of alias ${path} (${target} and ${norm})`);
+      }
+      aliases.set(path, norm);
+      return;
+    }
+    if (target) throw new Error(`module ${path} is already an alias of ${target}`);
+    if (module !== null && typeof module !== 'function') { // eslint-disable-line eqeqeq
+      throw new ArgumentError('definition must be a string (if an alias), function, or null');
     }
 
     if (moduleIsDefined(path)) {
@@ -585,7 +602,7 @@
 
   const requireRelative = (basePath, qualifiedPath, continuation) => {
     qualifiedPath = qualifiedPath.toString();
-    const path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
+    const path = realPath(fullyQualifyPath(qualifiedPath, basePath));
     return designatedRequire(path, continuation, basePath);
   };
 
